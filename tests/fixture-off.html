@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>MeLi toggle-OFF fixture</title></head>
+<body>
+  <!-- Same sidebar as unfiltered, but the toolbar toggle is OFF. -->
+  <aside aria-label="Filtros">
+    <section><h3>Origen del envío</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_ORIGEN_LOCAL">Local</a></li></ul>
+    </section>
+  </aside>
+
+  <script>
+    window.__navTarget = undefined;
+    window.__meliLdGo = (u) => { window.__navTarget = u; };
+    // Toggle OFF -> get() returns false instead of the default true.
+    window.chrome = { storage: { sync: { get: (def, cb) => cb({ localDeliveryEnabled: false }) } } };
+  </script>
+  <script src="../content.js"></script>
+</body>
+</html>

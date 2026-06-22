@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>MeLi unfiltered fixture</title></head>
+<body>
+  <!-- Realistic-ish MeLi search sidebar (built from the real label dump) -->
+  <header><a href="https://www.mercadolibre.com.ar/">Mercado Libre</a></header>
+  <aside aria-label="Filtros">
+    <section><h3>Costo de envío</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_Costo-de-envio_Gratis">Gratis</a></li></ul>
+    </section>
+    <section><h3>Tiendas oficiales</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_Tienda_oficial">Solo tiendas oficiales</a></li></ul>
+    </section>
+    <section><h3>Origen del envío</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_ORIGEN_LOCAL">Local</a></li></ul>
+    </section>
+    <section><h3>Marca</h3>
+      <ul>
+        <li><a href="https://listado.mercadolibre.com.ar/cafe/la-virginia_Marca">La Virginia</a></li>
+        <li><a href="https://listado.mercadolibre.com.ar/cafe/cabrales_Marca">Cabrales</a></li>
+      </ul>
+    </section>
+  </aside>
+  <main>
+    <a href="https://articulo.mercadolibre.com.ar/MLA-1-cafe">Café instantáneo Nescafé</a>
+    <a href="https://www.mercadolibre.com.ar/ayuda">Ayuda</a>
+  </main>
+
+  <script>
+    // Test seams BEFORE loading the content script.
+    window.__navTarget = undefined;
+    window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
+  </script>
+  <script src="../content.js"></script>
+</body>
+</html>

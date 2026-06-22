@@ -1,0 +1,5 @@
+popup-shot.png
+.playwright-mcp/
+__pycache__/
+*.pyc
+dist/

@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "MeLi Local Delivery",
+  "version": "1.0.0",
+  "description": "Forces the 'Origen del envío: Local' filter on MercadoLibre searches (only items that ship from within Argentina — local delivery, no international/customs delays). On by default; flip it off from the toolbar.",
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.mercadolibre.com.ar/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MeLi Local Delivery"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.mercadolibre.com.ar/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

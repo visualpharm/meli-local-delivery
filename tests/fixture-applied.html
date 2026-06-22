@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>MeLi already-filtered fixture</title></head>
+<body>
+  <!-- "Local" filter already applied: shown as a removable chip. -->
+  <header><a href="https://www.mercadolibre.com.ar/">Mercado Libre</a></header>
+  <div class="applied-filters">
+    <a href="https://listado.mercadolibre.com.ar/cafe" aria-label="Quitar el filtro Local">Local</a>
+  </div>
+  <aside aria-label="Filtros">
+    <section><h3>Marca</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/la-virginia_Marca">La Virginia</a></li></ul>
+    </section>
+  </aside>
+
+  <script>
+    window.__navTarget = undefined;
+    window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
+  </script>
+  <script src="../content.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root { --yellow:#FFE600; --blue:#3483FA; --ink:#2D3277; --muted:#888; }
+  * { box-sizing: border-box; }
+  body {
+    width: 280px; margin: 0; padding: 16px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: #333; background: #fff;
+  }
+  h1 { font-size: 14px; margin: 0 0 2px; }
+  .sub { font-size: 11px; color: var(--muted); margin: 0 0 14px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .label { font-size: 13px; font-weight: 600; }
+  /* iOS-style switch */
+  .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: 0 0 auto; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #ccc; transition: .2s; border-radius: 26px;
+  }
+  .slider:before {
+    content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px;
+    background: #fff; transition: .2s; border-radius: 50%;
+  }
+  input:checked + .slider { background: var(--blue); }
+  input:checked + .slider:before { transform: translateX(20px); }
+  .state {
+    margin-top: 14px; padding: 10px 12px; border-radius: 8px;
+    font-size: 12px; line-height: 1.4; background: #f4f6ff; color: var(--ink);
+  }
+  body.on .state { background: #eaf6ee; color: #1f7a3d; }
+  .hint { margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.4; }
+</style>
+</head>
+<body>
+  <h1>Origen del envío: Local</h1>
+  <p class="sub">MercadoLibre · solo envíos desde Argentina</p>
+
+  <div class="row">
+    <span class="label">Forzar origen Local</span>
+    <label class="switch">
+      <input type="checkbox" id="sw" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="state" id="state">…</div>
+
+  <p class="hint">Activado: cada búsqueda aplica el filtro “Local” (Origen del envío)
+  automáticamente. Desactivado: se muestran todos los resultados, incluidos los
+  internacionales. Cambiar recarga la pestaña de MeLi.</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
