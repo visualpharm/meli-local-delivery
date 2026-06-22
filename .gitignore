@@ -3,3 +3,5 @@ popup-shot.png
 __pycache__/
 *.pyc
 dist/
+
+.env.cws

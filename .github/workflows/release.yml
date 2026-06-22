@@ -1,0 +1,30 @@
+name: Publish to Chrome Web Store
+
+# Tag a release (git tag v1.0.1 && git push --tags) and this builds the zip
+# and ships it to the Web Store. Requires the repo secrets listed below.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build extension zip
+        run: |
+          zip -r extension.zip \
+            manifest.json content.js popup.html popup.js \
+            icons/icon16.png icons/icon48.png icons/icon128.png
+
+      - name: Upload & publish to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: extension.zip
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          publish: true
