@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MeLi Local Delivery",
   "version": "1.0.0",
-  "description": "Oculta los productos de compra internacional en Mercado Libre: fuerza el filtro nativo 'Origen del envío: Local'. Solo envíos desde Argentina.",
+  "description": "Oculta los importados en Mercado Libre: fuerza el filtro 'Origen del envío: Local'. Solo envíos desde Argentina.",
   "homepage_url": "https://aiandtractors.com",
   "permissions": ["storage"],
   "host_permissions": ["*://*.mercadolibre.com.ar/*"],
