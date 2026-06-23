@@ -1,5 +1,7 @@
 # Releasing
 
+> **The text you paste into the console lives in [`store/STORE-LISTING.md`](store/STORE-LISTING.md)** — name, summary, description, permission justifications, privacy. Open that file and copy from it.
+
 ## v1 — one time, in the console (mints the extension ID)
 
 The Chrome Web Store API can upload the *package* but **cannot** create the
