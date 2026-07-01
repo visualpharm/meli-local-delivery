@@ -5,3 +5,8 @@ __pycache__/
 dist/
 
 .env.cws
+
+# daily CWS status-check runtime state
+scripts/.cws-status-state.json
+scripts/.cws-check.log
+.claude/
