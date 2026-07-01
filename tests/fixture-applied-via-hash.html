@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>MeLi already-filtered-via-hash fixture</title></head>
+<body>
+  <!-- Reproduces the real-site failure: filter is applied (URL carries MeLi's
+       own applied_filter_name/applied_value_name hash) but there is NO
+       removable-chip element with a matching aria-label — the sidebar just
+       shows plain filter options, none of which are "Local" (already active
+       filters aren't re-offered as plain links on the real site). -->
+  <header><a href="https://www.mercadolibre.com.ar/">Mercado Libre</a></header>
+  <aside aria-label="Filtros">
+    <section><h3>Marca</h3>
+      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/la-virginia_Marca">La Virginia</a></li></ul>
+    </section>
+  </aside>
+
+  <script>
+    window.__navTarget = undefined;
+    window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
+    history.replaceState(null, "", location.pathname +
+      "#applied_filter_id=SHIPPING_ORIGIN&applied_filter_name=Origen+del+env%C3%ADo" +
+      "&applied_filter_order=17&applied_value_id=10215068&applied_value_name=Local" +
+      "&applied_value_order=2&applied_value_results=85&is_custom=false");
+  </script>
+  <script src="../content.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>MeLi flapping-loop fixture</title></head>
+<body>
+  <!-- Reproduces the reported loop: filter is applied via hash on arrival, but
+       ~700ms later MeLi's own SPA strips the hash (history.replaceState) AND
+       the sidebar's "Local" option is still present as a plain, currently-
+       selected link (no remove-chip markers) whose href would REMOVE the
+       filter. A buggy extension would then "detect" unfiltered, click that
+       stale link, and undo its own filter. -->
+  <header><a href="https://www.mercadolibre.com.ar/">Mercado Libre</a></header>
+  <aside aria-label="Filtros">
+    <section><h3>Origen del envio</h3>
+      <ul>
+        <li class="filter-option--selected">
+          <a href="https://listado.mercadolibre.com.ar/silicona-no-seca-preserva" aria-current="true">Local</a>
+        </li>
+      </ul>
+    </section>
+  </aside>
+
+  <script>
+    window.__navTarget = undefined;
+    window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
+    history.replaceState(null, "", location.pathname +
+      "#applied_filter_id=SHIPPING_ORIGIN&applied_filter_name=Origen+del+env%C3%ADo" +
+      "&applied_filter_order=17&applied_value_id=10215068&applied_value_name=Local" +
+      "&applied_value_order=2&applied_value_results=85&is_custom=false");
+    // Simulate MeLi's own client-side cleanup stripping the hash ~700ms later.
+    setTimeout(() => history.replaceState(null, "", location.pathname), 700);
+  </script>
+  <script src="../content.js"></script>
+</body>
+</html>
