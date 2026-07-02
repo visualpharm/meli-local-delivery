@@ -2,27 +2,47 @@
 <html lang="es">
 <head><meta charset="utf-8"><title>MeLi unfiltered fixture</title></head>
 <body>
-  <!-- Realistic-ish MeLi search sidebar (built from the real label dump) -->
+  <!-- Realistic-ish MeLi search page (markup from the real 2026-07 site):
+       sidebar with the "Origen del envío → Local" link, results grid with one
+       international (CBT) card, result count, pagination. -->
   <header><a href="https://www.mercadolibre.com.ar/">Mercado Libre</a></header>
+
   <aside aria-label="Filtros">
-    <section><h3>Costo de envío</h3>
-      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_Costo-de-envio_Gratis">Gratis</a></li></ul>
-    </section>
-    <section><h3>Tiendas oficiales</h3>
-      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_Tienda_oficial">Solo tiendas oficiales</a></li></ul>
-    </section>
-    <section><h3>Origen del envío</h3>
-      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_ORIGEN_LOCAL">Local</a></li></ul>
-    </section>
-    <section><h3>Marca</h3>
+    <div class="ui-search-filter-dl"><h3 class="ui-search-filter-dt-title">Costo de envío</h3>
+      <ul><li class="ui-search-filter-container"><a class="ui-search-link" href="https://listado.mercadolibre.com.ar/cafe_Costo-de-envio_Gratis">Gratis</a></li></ul>
+    </div>
+    <div class="ui-search-filter-dl"><h3 class="ui-search-filter-dt-title">Origen del envío</h3>
       <ul>
-        <li><a href="https://listado.mercadolibre.com.ar/cafe/la-virginia_Marca">La Virginia</a></li>
-        <li><a href="https://listado.mercadolibre.com.ar/cafe/cabrales_Marca">Cabrales</a></li>
+        <li class="ui-search-filter-container">
+          <a class="ui-search-link" title="Local" aria-label="Local"
+             href="https://listado.mercadolibre.com.ar/cafe_NoIndex_True_SHIPPING*ORIGIN_10215068#applied_filter_id%3DSHIPPING_ORIGIN%26applied_filter_name%3DOrigen+del+env%C3%ADo%26applied_value_id%3D10215068%26applied_value_name%3DLocal"><span class="ui-search-filter-name">Local</span></a>
+        </li>
+        <li class="ui-search-filter-container">
+          <a class="ui-search-link" title="Internacional" aria-label="Internacional"
+             href="https://listado.mercadolibre.com.ar/cafe_NoIndex_True_SHIPPING*ORIGIN_10215069"><span class="ui-search-filter-name">Internacional</span></a>
+        </li>
       </ul>
-    </section>
+    </div>
   </aside>
+
   <main>
-    <a href="https://articulo.mercadolibre.com.ar/MLA-1-cafe">Café instantáneo Nescafé</a>
+    <span class="ui-search-search-result__quantity-results">+9.999 resultados</span>
+    <ol class="ui-search-layout ui-search-layout--grid">
+      <li class="ui-search-layout__item" id="card-local-1"><div class="poly-card">
+        <h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-1">Café La Virginia 500g</a></h3>
+        <span class="andes-visually-hidden">4990 pesos argentinos</span>
+      </div></li>
+      <li class="ui-search-layout__item" id="card-intl-1"><div class="poly-card">
+        <h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-2">Cafetera portátil TWS</a></h3>
+        <span class="poly-component__cbt" aria-hidden="true"><svg></svg> <span class="polylabel-label">China</span></span>
+        <span class="andes-visually-hidden">Internacional China Enviado por FULL</span>
+      </div></li>
+      <li class="ui-search-layout__item" id="card-local-2"><div class="poly-card">
+        <h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-3">Café Cabrales molido</a></h3>
+        <span class="andes-visually-hidden">6120 pesos argentinos</span>
+      </div></li>
+    </ol>
+    <ul class="andes-pagination" id="pag-unfiltered"><li>1</li><li>2</li></ul>
     <a href="https://www.mercadolibre.com.ar/ayuda">Ayuda</a>
   </main>
 
@@ -30,8 +50,26 @@
     // Test seams BEFORE loading the content script.
     window.__navTarget = undefined;
     window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.__fetchCalls = [];
+    window.__meliLdFetch = (u) => {
+      window.__fetchCalls.push(u);
+      return new Promise((res) => setTimeout(res, 100)).then(() => (`<!DOCTYPE html><html><body>
+        <span class="ui-search-search-result__quantity-results">17.155 resultados</span>
+        <ol class="ui-search-layout ui-search-layout--grid" id="swapped-grid">
+          <li class="ui-search-layout__item"><div class="poly-card"><h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-1">Café La Virginia 500g</a></h3></div></li>
+          <li class="ui-search-layout__item"><div class="poly-card"><h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-3">Café Cabrales molido</a></h3></div></li>
+          <li class="ui-search-layout__item"><div class="poly-card"><h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-4">Café Bonafide en grano</a></h3></div></li>
+        </ol>
+        <ul class="andes-pagination" id="pag-filtered"><li>1</li></ul>
+      </body></html>`));
+    };
     window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
   </script>
   <script src="../content.js"></script>
+  <script>
+    // Sampled synchronously after content.js: the intl card must already be
+    // hidden BEFORE any swap/navigation — that is the no-blink guarantee.
+    window.__intlHiddenAtLoad = getComputedStyle(document.getElementById('card-intl-1')).display === 'none';
+  </script>
 </body>
 </html>

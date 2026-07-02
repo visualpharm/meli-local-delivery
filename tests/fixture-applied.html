@@ -16,6 +16,8 @@
   <script>
     window.__navTarget = undefined;
     window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.__fetchCalls = [];
+    window.__meliLdFetch = (u) => { window.__fetchCalls.push(u); return Promise.resolve("<html></html>"); };
     window.chrome = { storage: { sync: { get: (def, cb) => cb(def) } } };
   </script>
   <script src="../content.js"></script>

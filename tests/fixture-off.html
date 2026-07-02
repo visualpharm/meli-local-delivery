@@ -2,16 +2,29 @@
 <html lang="es">
 <head><meta charset="utf-8"><title>MeLi toggle-OFF fixture</title></head>
 <body>
-  <!-- Same sidebar as unfiltered, but the toolbar toggle is OFF. -->
+  <!-- Toggle OFF: nothing may be hidden, fetched, swapped or navigated. -->
   <aside aria-label="Filtros">
-    <section><h3>Origen del envío</h3>
-      <ul><li><a href="https://listado.mercadolibre.com.ar/cafe/_ORIGEN_LOCAL">Local</a></li></ul>
-    </section>
+    <div class="ui-search-filter-dl"><h3 class="ui-search-filter-dt-title">Origen del envío</h3>
+      <ul><li class="ui-search-filter-container">
+        <a class="ui-search-link" title="Local" aria-label="Local"
+           href="https://listado.mercadolibre.com.ar/cafe_NoIndex_True_SHIPPING*ORIGIN_10215068"><span class="ui-search-filter-name">Local</span></a>
+      </li></ul>
+    </div>
   </aside>
-
+  <main>
+    <ol class="ui-search-layout ui-search-layout--grid">
+      <li class="ui-search-layout__item" id="card-intl-1"><div class="poly-card">
+        <h3><a class="poly-component__title" href="https://articulo.mercadolibre.com.ar/MLA-2">Cafetera portátil TWS</a></h3>
+        <span class="poly-component__cbt" aria-hidden="true"><span class="polylabel-label">China</span></span>
+        <span class="andes-visually-hidden">Internacional China Enviado por FULL</span>
+      </div></li>
+    </ol>
+  </main>
   <script>
     window.__navTarget = undefined;
     window.__meliLdGo = (u) => { window.__navTarget = u; };
+    window.__fetchCalls = [];
+    window.__meliLdFetch = (u) => { window.__fetchCalls.push(u); return Promise.resolve("<html></html>"); };
     // Toggle OFF -> get() returns false instead of the default true.
     window.chrome = { storage: { sync: { get: (def, cb) => cb({ localDeliveryEnabled: false }) } } };
   </script>

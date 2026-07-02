@@ -1,72 +1,137 @@
 // MeLi Local Delivery — content script.
 //
 // Goal: on MercadoLibre Argentina search/listado pages, force the
-// "Origen del envío → Local" filter ON by default — i.e. only items that ship
-// from within Argentina (local delivery, no international/customs delays).
+// "Origen del envío → Local" filter ON by default — only items that ship
+// from within Argentina — WITHOUT ever blinking the page.
 //
-// Hard constraint: we never hardcode MeLi's filter URL encoding (they change
-// it). Instead we locate MeLi's OWN sidebar filter link labeled "Local" and
-// follow the URL MeLi itself built. If the filter is already applied, or the
-// toolbar toggle is OFF, we do nothing.
+// No-blink strategy (v1.1):
+//  1. From document_start, international (CBT) result cards are hidden BEFORE
+//     first paint: a CSS :has() rule keyed on MeLi's own cross-border badge
+//     (.poly-component__cbt), plus a MutationObserver fallback that tags cards
+//     whose accessible text starts with "Internacional". The page paints once,
+//     already local-only. The whole-page visibility:hidden of v1.0 (the white
+//     flash) is gone.
+//  2. In the background, locate MeLi's OWN sidebar filter link labeled "Local"
+//     and fetch the URL MeLi itself built (same-origin, with cookies). Swap
+//     the results grid, result count and pagination in place and
+//     history.replaceState to the filtered URL. Counters, order and pages end
+//     up exactly as if the user had clicked the filter — but nothing
+//     navigates, so nothing flickers.
+//  3. Only if the in-place swap is impossible (fetch failed, markup drifted)
+//     fall back to location.replace() of the filtered URL. With no page-hide
+//     and the internationals already hidden, Chrome's paint holding makes
+//     that a soft transition, not a white flash.
+//
+// Hard constraint kept from v1.0: never hardcode MeLi's filter URL encoding
+// (they change it) — always follow the URL MeLi itself built into the sidebar
+// link. If the filter is already applied, or the toolbar toggle is OFF, do
+// nothing.
 
 (() => {
   "use strict";
 
-  // TEMP DEBUG — remove once the blink is confirmed fixed on the real site.
-  const _t0 = Date.now();
-  const DBG = (...a) => console.log("[MeLiLD]", `+${Date.now() - _t0}ms`, ...a);
-  DBG("script start", location.href);
-
   const STORAGE_KEY = "localDeliveryEnabled"; // default true
   const ACTED_KEY = "__meli_ld_acted_for__"; // per-URL guard
   const TARGETS_KEY = "__meli_ld_targets__"; // URLs we've already redirected TO
+  const MIRROR_KEY = "__meli_ld_on__"; // sync-readable mirror of the toggle
+  const ATTR = "data-meli-ld-intl"; // set on cards the observer classifies
 
   // The "Origen del envío" option that means domestic shipping.
   const LABELS = ["local"];
 
-  // Longest we'll hold the page hidden while deciding whether to redirect.
-  // Bounded short so non-listing pages (product, cart, home...) where the
-  // "Local" link will never appear aren't held blank for long.
-  const HIDE_BUDGET_MS = 1500;
+  // Diagnostic/testing state (isolated world: invisible to MeLi's own JS).
+  const state = (window.__meliLdState = { hiddenCards: 0, swapped: false, reason: null });
 
   const norm = (s) => (s || "").replace(/\s+/g, " ").trim().toLowerCase();
 
-  // Navigation seam: overridable in tests, real redirect in production.
+  // Seams: overridable in test fixtures (same-world <script src>), inert in
+  // production where the content script world is isolated from the page.
   const go =
     typeof window.__meliLdGo === "function"
       ? window.__meliLdGo
       : (u) => {
-          location.href = u;
+          location.replace(u);
         };
+  const fetchText =
+    typeof window.__meliLdFetch === "function"
+      ? window.__meliLdFetch
+      : (u) =>
+          fetch(u, { credentials: "include" }).then((r) => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.text();
+          });
 
-  // Hide the page until we've decided whether to redirect. Without this,
-  // the unfiltered (international-included) results paint first and THEN
-  // the page reloads to the local-only URL — visible as a blink. Runs at
-  // document_start so this style lands before MeLi paints anything.
-  let hideStyle = null;
-  function hide() {
-    if (hideStyle) return;
-    hideStyle = document.createElement("style");
-    hideStyle.textContent = "html{visibility:hidden!important}";
-    document.documentElement.appendChild(hideStyle);
-  }
-  function reveal() {
-    if (hideStyle) {
-      DBG("reveal()");
-      hideStyle.remove();
-      hideStyle = null;
+  // ------------------------------------------------------------------ toggle
+  // chrome.storage is async; to hide international cards BEFORE first paint we
+  // need a synchronous read, so the last-known toggle value is mirrored into
+  // localStorage. The popup reloads the tab on toggle, so the mirror is always
+  // refreshed (below, in the storage callback) before the next page load.
+  function mirrorSaysOn() {
+    try {
+      return localStorage.getItem(MIRROR_KEY) !== "0";
+    } catch {
+      return true;
     }
   }
-  hide();
-  DBG("hide()");
-  setTimeout(() => {
-    DBG("HIDE_BUDGET_MS timeout fired");
-    reveal();
-  }, HIDE_BUDGET_MS);
-  window.addEventListener("pageshow", (e) => {
-    if (e.persisted) reveal(); // bfcache restore — don't stay hidden
-  });
 
+  // --------------------------------------------------- pre-paint intl hiding
+  // Primary: pure CSS on MeLi's own cross-border badge — applies the instant
+  // each card parses, so an international card never reaches the screen.
+  // Secondary: the observer tags cards whose visually-hidden a11y text starts
+  // with "Internacional" (covers a badge-markup drift as long as the a11y
+  // text survives).
+  let style = null;
+  let observer = null;
+
+  function installHiding() {
+    style = document.createElement("style");
+    style.setAttribute("data-meli-ld", "1"); // detectable from the page world (tests/diagnostics)
+    style.textContent =
+      `li.ui-search-layout__item:has(.poly-component__cbt),` +
+      `li.ui-search-layout__item[${ATTR}]{display:none!important}`;
+    // With run_at document_start <html> already exists; the defer branch covers
+    // environments that inject even earlier (CDP harness).
+    if (document.documentElement) {
+      document.documentElement.appendChild(style);
+    } else {
+      const rootWait = new MutationObserver(() => {
+        if (!document.documentElement) return;
+        rootWait.disconnect();
+        if (style) document.documentElement.appendChild(style);
+      });
+      rootWait.observe(document, { childList: true });
+    }
+
+    const INTL_RX = /^\s*internacional\b/i;
+    const classify = (el) => {
+      if (!el.matches) return;
+      const marks = el.matches(".poly-component__cbt, .andes-visually-hidden")
+        ? [el]
+        : el.querySelectorAll(".poly-component__cbt, .andes-visually-hidden");
+      for (const m of marks) {
+        if (!m.classList.contains("poly-component__cbt") && !INTL_RX.test(m.textContent || "")) continue;
+        const li = m.closest("li.ui-search-layout__item");
+        if (li && !li.hasAttribute(ATTR)) {
+          li.setAttribute(ATTR, "");
+          state.hiddenCards++;
+        }
+      }
+    };
+    observer = new MutationObserver((muts) => {
+      for (const mu of muts) for (const n of mu.addedNodes) if (n.nodeType === 1) classify(n);
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  }
+
+  function teardownHiding() {
+    if (observer) observer.disconnect(), (observer = null);
+    if (style) style.remove(), (style = null);
+    for (const el of document.querySelectorAll(`[${ATTR}]`)) el.removeAttribute(ATTR);
+  }
+
+  if (mirrorSaysOn()) installHiding();
+
+  // ------------------------------------------------------- filter detection
   function visitedTargets() {
     try {
       return new Set(JSON.parse(sessionStorage.getItem(TARGETS_KEY) || "[]"));
@@ -83,11 +148,10 @@
   // Already applied? Two independent signals — either is enough. MeLi's own
   // "Local" link carries a URL hash confirming what it just applied (e.g.
   // "#applied_filter_name=Origen+del+envío&applied_value_name=Local"), which
-  // survives the redirect and is far more reliable than scraping the sidebar,
-  // where the removable-chip markup varies (real-site testing found the
-  // chip's aria-label check alone left the arrival page falsely "unfiltered"
-  // for the full poll window). Neither check hardcodes MeLi's filter IDs —
-  // both read the human-readable labels MeLi puts there itself.
+  // survives into the filtered page and is far more reliable than scraping
+  // the sidebar, where the removable-chip markup varies. Neither check
+  // hardcodes MeLi's filter IDs — both read the human-readable labels MeLi
+  // puts there itself.
   function alreadyFiltered() {
     let hash = "";
     try {
@@ -138,39 +202,89 @@
     return null;
   }
 
+  // -------------------------------------------------------- in-place swap
+  // Replace the results grid, count and pagination with the ones from the
+  // filtered page MeLi served. Everything else (header, sidebar) stays — the
+  // sidebar still offers MeLi's own filters, whose links now simply navigate
+  // to already-filtered pages.
+  function swapDocument(html, targetUrl) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const newOl = doc.querySelector('ol[class*="ui-search-layout"]');
+    const liveOl = document.querySelector('ol[class*="ui-search-layout"]');
+    if (!newOl || !liveOl) return false;
+    liveOl.replaceWith(document.adoptNode(newOl));
+
+    const newQty = doc.querySelector('[class*="quantity-results"]');
+    const liveQty = document.querySelector('[class*="quantity-results"]');
+    if (newQty && liveQty) liveQty.textContent = newQty.textContent;
+
+    const livePag = document.querySelector("ul.andes-pagination");
+    const newPag = doc.querySelector("ul.andes-pagination");
+    if (livePag) {
+      if (newPag) livePag.replaceWith(document.adoptNode(newPag));
+      else livePag.remove(); // filtered results fit one page
+    }
+
+    // Make reload/share/back land on the genuinely filtered URL (its hash also
+    // marks the page as already-filtered for this script).
+    try {
+      history.replaceState(null, "", targetUrl);
+    } catch {
+      /* cross-origin in test fixtures */
+    }
+    return true;
+  }
+
   // Stop the poll loop the moment we reach ANY terminal decision. Without
   // this, a poll 5-10s later could re-evaluate against a DOM/URL that MeLi's
   // own client-side JS mutated since (e.g. stripping the confirmation hash),
-  // flip our verdict, and fire a second, unwanted redirect — the exact
-  // "loads filtered, then switches off, then reloads again" loop.
+  // flip our verdict, and act a second, unwanted time.
   let timer = null;
   function stop() {
     if (timer) {
       clearInterval(timer);
       timer = null;
-      DBG("stop polling");
     }
+  }
+  function done(reason) {
+    state.reason = reason;
+    stop();
+  }
+
+  let armed = false; // storage read confirmed the toggle is ON
+  let acted = false;
+
+  function fallbackGo(target) {
+    if (visitedTargets().has(target)) return done("already visited target");
+    rememberTarget(target);
+    done("fallback navigation");
+    go(target);
   }
 
   function apply() {
-    chrome.storage.sync.get({ [STORAGE_KEY]: true }, (cfg) => {
-      if (cfg[STORAGE_KEY] === false) return DBG("OFF") || reveal() || stop(); // explicitly turned OFF
-      if (sessionStorage.getItem(ACTED_KEY) === location.href) return DBG("already acted") || reveal() || stop();
-      if (alreadyFiltered()) return DBG("already filtered") || reveal() || stop();
+    if (!armed || acted) return;
+    if (sessionStorage.getItem(ACTED_KEY) === location.href) return done("already acted");
+    if (alreadyFiltered()) return done("already filtered");
 
-      const link = findFilterLink();
-      if (!link) return DBG("no link yet"); // sidebar not rendered yet — keep waiting, stay hidden
+    const link = findFilterLink();
+    if (!link) return; // sidebar not rendered yet — keep polling
 
-      const target = link.href; // absolute, browser-resolved
-      if (!target || target === location.href) return DBG("target === self") || reveal() || stop();
-      if (visitedTargets().has(target)) return DBG("already visited target", target) || reveal() || stop();
+    const target = link.href; // absolute, browser-resolved
+    if (!target || target === location.href) return done("target === self");
 
-      DBG("REDIRECTING to", target);
-      sessionStorage.setItem(ACTED_KEY, location.href);
-      rememberTarget(target);
-      stop();
-      go(target); // navigating away — stay hidden, the next document hides itself too
-    });
+    acted = true;
+    sessionStorage.setItem(ACTED_KEY, location.href);
+    stop();
+    fetchText(target)
+      .then((html) => {
+        if (swapDocument(html, target)) {
+          state.swapped = true;
+          state.reason = "swapped";
+        } else {
+          fallbackGo(target);
+        }
+      })
+      .catch(() => fallbackGo(target));
   }
 
   // MeLi loads the filters sidebar asynchronously, so poll briefly. The
@@ -181,7 +295,22 @@
   let tries = 0;
   timer = setInterval(() => {
     apply();
-    if (++tries >= 20) stop(); // ~10s then give up
+    if (++tries >= 20) done("gave up waiting for sidebar"); // ~10s then give up
   }, 500);
-  apply();
+
+  chrome.storage.sync.get({ [STORAGE_KEY]: true }, (cfg) => {
+    const on = cfg[STORAGE_KEY] !== false;
+    try {
+      localStorage.setItem(MIRROR_KEY, on ? "1" : "0");
+    } catch {
+      /* storage may be unavailable */
+    }
+    if (!on) {
+      teardownHiding();
+      return done("OFF");
+    }
+    if (!style) installHiding(); // mirror said OFF but the toggle is ON again
+    armed = true;
+    apply();
+  });
 })();

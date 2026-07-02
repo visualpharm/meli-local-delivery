@@ -28,14 +28,16 @@ Local”** en cada búsqueda, así ves **solo productos que se envían desde
 Argentina** — sin aduana, sin demoras, sin importados de China.
 
 ✅ Filtra la compra internacional automáticamente, en cada búsqueda
+✅ Sin parpadeo: los importados se ocultan antes de dibujarse y el filtro se aplica sin recargar la página
 ✅ Solo productos nacionales, con envío local
 ✅ Interruptor de un clic: encendido por defecto, apagalo cuando quieras ver todo
 ✅ Liviana y privada: no recopila datos, no toca tu cuenta ni el pago
 
 **¿Por qué es mejor que las que “borran” resultados?** Otras extensiones eliminan
-las publicaciones del DOM y rompen la paginación y los contadores. Esta usa el
-**propio filtro de Mercado Libre**, así que el orden, las páginas y la cantidad
-de resultados quedan correctos.
+publicaciones del DOM y rompen la paginación y los contadores. Esta oculta los
+importados al instante y enseguida aplica el **propio filtro de Mercado Libre**,
+reemplazando el listado sin recargar la página: el orden, las páginas y la
+cantidad de resultados quedan correctos, sin parpadeos.
 
 Ideal para quien compra en Mercado Libre Argentina y quiere **evitar los
 productos del exterior** y recibir rápido, con envío nacional.
@@ -53,11 +55,15 @@ automatically, hiding international-purchase listings, with a one-click on/off t
   is stored.
 - **host permission `*://*.mercadolibre.com.ar/*`** — The extension only runs on
   MercadoLibre Argentina pages, where it reads the search sidebar to find the
-  "Local" filter link and redirects the current tab to the filtered results.
+  "Local" filter link, fetches MercadoLibre's own filtered results page and
+  swaps it into the current listing (no full reload).
 
 ## Privacy
 - Does **not** collect, transmit, or sell any user data.
-- No analytics, no remote servers, no network requests of its own.
+- No analytics, no remote servers. Its only network request fetches
+  MercadoLibre's own filtered results page from mercadolibre.com.ar (same
+  site, same session) to swap it in without reloading; nothing goes to third
+  parties.
 - The only stored value is a boolean (filter on/off) in `chrome.storage.sync`.
 
 ## Assets
